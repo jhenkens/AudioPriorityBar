@@ -17,10 +17,10 @@ struct DeviceListView: View {
     @State private var draggingIndex: Int? = nil
     @State private var targetIndex: Int? = nil
     
-    private let rowHeight: CGFloat = 36
+    private let rowHeight: CGFloat = 32
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
             ForEach(Array(devices.enumerated()), id: \.element.id) { index, device in
                 DraggableDeviceRow(
                     device: device,
@@ -150,82 +150,89 @@ struct DraggableDeviceRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 8) {
             // Drag handle + priority label area
             if !isHiddenSection {
                 ZStack {
                     // Drag handle icon
                     Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 10))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
-                        .frame(width: 38, height: rowHeight)
+                        .frame(width: 36, height: rowHeight)
                         .opacity(isHovering || isDragging ? 1 : 0)
+                        .scaleEffect(isHovering || isDragging ? 1 : 0.8)
                     
                     // Priority number or "Active" label when not hovering
                     Group {
                         if isSelected && !isDisconnected {
                             Text("Active")
-                                .font(.system(size: 9, weight: .semibold))
+                                .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(.accentColor)
                         } else {
                             Text("\(index + 1)")
-                                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                .foregroundColor(.secondary)
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.secondary.opacity(0.8))
                         }
                     }
                     .opacity(isHovering || isDragging ? 0 : 1)
+                    .scaleEffect(isHovering || isDragging ? 0.8 : 1)
                 }
-                .frame(width: 38)
+                .frame(width: 36)
+                .animation(.easeInOut(duration: 0.12), value: isHovering)
+                .animation(.easeInOut(duration: 0.12), value: isDragging)
             }
 
             // Device name - use HStack with tap gesture instead of Button to not interfere with drag
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Text(device.name)
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: .regular))
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .foregroundColor(isGrayed ? .secondary : .primary)
 
                 if let icon = statusIcon {
                     Image(systemName: icon)
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary.opacity(0.7))
                 }
 
                 if let lastSeen = lastSeenText {
                     Text(lastSeen)
-                        .font(.system(size: 9))
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary.opacity(0.6))
                 }
 
                 if isMuted {
                     Text("Muted")
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
                         .background(Capsule().fill(Color.red))
                 }
 
-                Spacer(minLength: 8)
+                Spacer(minLength: 12)
 
                 if isSelected && !isDisconnected {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.accentColor)
-                        .font(.system(size: 14))
+                        .font(.system(size: 15))
+                        .transition(.scale.combined(with: .opacity))
                 }
             }
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isSelected)
 
             // Actions menu - always reserve space to prevent layout shifts
             ZStack {
                 // Invisible placeholder to reserve space
                 Image(systemName: "ellipsis.circle")
-                    .font(.system(size: 13))
-                    .frame(width: 24, height: 24)
+                    .font(.system(size: 14))
+                    .frame(width: 28, height: 28)
                     .opacity(0)
                 
                 // Actual menu (shown on hover)
                 if isHovering && !isDragging {
+                    Group {
                     Menu {
                     if showCategoryPicker {
                         Button {
@@ -278,51 +285,63 @@ struct DraggableDeviceRow: View {
                     }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 13))
+                            .font(.system(size: 14))
                             .foregroundColor(.secondary)
-                            .frame(width: 24, height: 24)
+                            .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
                     }
                     .menuStyle(.borderlessButton)
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }
-            .frame(width: 28)
+            .frame(width: 32)
+            .animation(.easeInOut(duration: 0.12), value: isHovering)
         }
-        .padding(.leading, 2)
-        .padding(.trailing, 6)
+        .padding(.leading, 8)
+        .padding(.trailing, 10)
         .padding(.vertical, 5)
         .opacity(isDragging ? 0.5 : (isGrayed ? 0.6 : 1.0))
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isSelected && !isDisconnected ? Color.accentColor.opacity(0.1) : (isHovering ? Color.primary.opacity(0.05) : Color.clear))
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isSelected && !isDisconnected ? Color.accentColor.opacity(0.12) : (isHovering ? Color.primary.opacity(0.06) : Color.clear))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(isSelected && !isDisconnected ? Color.accentColor : Color.clear, lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected && !isDisconnected ? Color.accentColor.opacity(0.8) : Color.clear, lineWidth: 1.5)
         )
         // Drop indicator above this row
         .overlay(alignment: .top) {
             if isDropTarget {
                 DropIndicatorLine()
-                    .offset(y: -4)
+                    .offset(y: -5)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
         // Drop indicator below this row (for last position)
         .overlay(alignment: .bottom) {
             if isDropTargetBelow {
                 DropIndicatorLine()
-                    .offset(y: 4)
+                    .offset(y: 5)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
         .onHover { hovering in
-            isHovering = hovering
+            withAnimation(.easeInOut(duration: 0.12)) {
+                isHovering = hovering
+            }
         }
         // Highlight the dragged row with a border instead of moving it
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(isDragging ? Color.accentColor : Color.clear, lineWidth: 2)
         )
         .scaleEffect(isDragging ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: isHovering)
+        .animation(.easeInOut(duration: 0.15), value: isSelected)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
+        .animation(.easeInOut(duration: 0.1), value: isDropTarget)
+        .animation(.easeInOut(duration: 0.1), value: isDropTargetBelow)
         .contentShape(Rectangle())
         .onTapGesture {
             if !isDisconnected && audioManager.isCustomMode {

@@ -1,99 +1,18 @@
 import SwiftUI
 import CoreAudio
-import AppKit
 
 @main
-struct AudioPriorityBarMain {
-    private static let delegate = AppDelegate()
-
-    static func main() {
-        let app = NSApplication.shared
-        // Start as regular app to ensure proper menu bar initialization
-        app.setActivationPolicy(.regular)
-        app.delegate = delegate
-        
-        // Switch to accessory after menu bar is set up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            app.setActivationPolicy(.accessory)
-            NSLog("AudioPriorityBar: Switched to accessory mode")
-        }
-        
-        app.run()
-    }
-}
-
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var statusItem: NSStatusItem?
-    private var popover: NSPopover?
-    private var audioManager: AudioManager?
-
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        // Create status item IMMEDIATELY
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        
-        if let button = statusItem?.button {
-            // Use SF Symbol for the icon
-            let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
-            if let img = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Audio")?
-                .withSymbolConfiguration(config) {
-                img.isTemplate = true
-                button.image = img
-            } else {
-                button.title = "🔊"
-            }
-            button.action = #selector(togglePopover(_:))
-            button.target = self
-        }
-        
-        NSLog("AudioPriorityBar: Status item created")
-        
-        // Delay popover initialization
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            self?.setupPopover()
-        }
-    }
+struct AudioPriorityBarApp: App {
+    @StateObject private var audioManager = AudioManager()
     
-    @MainActor
-    private func setupPopover() {
-        NSLog("AudioPriorityBar: Setting up popover...")
-        
-        popover = NSPopover()
-        popover?.contentSize = NSSize(width: 340, height: 500)
-        popover?.behavior = .transient
-        popover?.animates = true
-
-        audioManager = AudioManager()
-        if let audioManager, let popover {
-            popover.contentViewController = NSHostingController(
-                rootView: MenuBarView().environmentObject(audioManager)
-            )
+    var body: some Scene {
+        MenuBarExtra {
+            MenuBarView()
+                .environmentObject(audioManager)
+        } label: {
+            Image(systemName: "speaker.wave.2.fill")
         }
-        
-        NSLog("AudioPriorityBar: Popover ready")
-    }
-
-    @objc private func togglePopover(_ sender: Any?) {
-        guard let button = statusItem?.button, let popover else {
-            NSLog("AudioPriorityBar: Popover not ready")
-            return
-        }
-        
-        if popover.isShown {
-            popover.performClose(sender)
-        } else {
-            // Use button bounds directly, show below
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            
-            // After showing, manually adjust the window position down by icon height
-            if let popoverWindow = popover.contentViewController?.view.window {
-                var frame = popoverWindow.frame
-                frame.origin.y -= button.bounds.height
-                popoverWindow.setFrame(frame, display: true)
-            }
-            
-            popover.contentViewController?.view.window?.makeKey()
-            NSLog("AudioPriorityBar: Popover shown")
-        }
+        .menuBarExtraStyle(.window)
     }
 }
 

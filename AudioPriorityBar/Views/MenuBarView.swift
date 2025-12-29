@@ -8,18 +8,19 @@ struct MenuBarView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Header with mode toggle and volume
-            VStack(spacing: 10) {
+            VStack(spacing: 14) {
                 ModeToggleView()
                 VolumeSliderView()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.primary.opacity(0.03))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color.primary.opacity(0.02))
 
             Divider()
+                .padding(.horizontal, 12)
 
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     // Speakers (show in speaker mode or custom mode)
                     if audioManager.currentMode == .speaker || audioManager.isCustomMode {
                         DeviceSectionView(
@@ -78,51 +79,57 @@ struct MenuBarView: View {
                         showCategoryPicker: false
                     )
                 }
-                .padding(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
             }
+            .frame(maxHeight: 420)
 
             Divider()
+                .padding(.horizontal, 12)
 
             // Footer
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 // Hidden devices toggle (only in normal mode)
                 if !audioManager.isEditMode {
                     HiddenDevicesToggleView()
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
 
                 Spacer()
 
                 // Edit mode toggle
                 Button {
-                    audioManager.toggleEditMode()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        audioManager.toggleEditMode()
+                    }
                 } label: {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Image(systemName: audioManager.isEditMode ? "checkmark.circle.fill" : "pencil.circle")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                         Text(audioManager.isEditMode ? "Done" : "Edit")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundColor(audioManager.isEditMode ? .accentColor : .secondary)
                 }
                 .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.2), value: audioManager.isEditMode)
 
                 // Quit button
                 Button {
                     NSApplication.shared.terminate(nil)
                 } label: {
-                    Image(systemName: "xmark.circle")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary.opacity(0.6))
                 }
                 .buttonStyle(.plain)
                 .help("Quit")
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .animation(.easeInOut(duration: 0.2), value: audioManager.isEditMode)
         }
-        .frame(width: 320)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxHeight: 650)
+        .frame(width: 340)
     }
 }
 
@@ -130,46 +137,51 @@ struct ModeToggleView: View {
     @EnvironmentObject var audioManager: AudioManager
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             ForEach(OutputCategory.allCases, id: \.self) { mode in
+                let isSelected = audioManager.currentMode == mode && !audioManager.isCustomMode
                 Button {
-                    if audioManager.isCustomMode {
-                        audioManager.setCustomMode(false)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        if audioManager.isCustomMode {
+                            audioManager.setCustomMode(false)
+                        }
+                        audioManager.setMode(mode)
                     }
-                    audioManager.setMode(mode)
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: mode.icon)
                             .font(.system(size: 11))
                         Text(mode.label)
                             .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(audioManager.currentMode == mode && !audioManager.isCustomMode
-                                ? Color.accentColor
-                                : Color.clear)
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(isSelected ? Color.accentColor : Color.clear)
                     )
-                    .foregroundColor(audioManager.currentMode == mode && !audioManager.isCustomMode ? .white : .secondary)
+                    .foregroundColor(isSelected ? .white : .secondary)
                 }
                 .buttonStyle(.plain)
             }
 
             // Custom mode toggle
             Button {
-                audioManager.setCustomMode(!audioManager.isCustomMode)
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    audioManager.setCustomMode(!audioManager.isCustomMode)
+                }
             } label: {
                 Image(systemName: "hand.raised.fill")
-                    .font(.system(size: 11))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
+                    .font(.system(size: 12))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .contentShape(Rectangle())
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 8)
                             .fill(audioManager.isCustomMode ? Color.orange : Color.clear)
                     )
                     .foregroundColor(audioManager.isCustomMode ? .white : .secondary)
@@ -177,11 +189,13 @@ struct ModeToggleView: View {
             .buttonStyle(.plain)
             .help("Manual mode - disable auto-switching")
         }
-        .padding(3)
+        .padding(4)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(0.06))
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.primary.opacity(0.05))
         )
+        .animation(.easeInOut(duration: 0.2), value: audioManager.currentMode)
+        .animation(.easeInOut(duration: 0.2), value: audioManager.isCustomMode)
     }
 }
 
@@ -205,11 +219,12 @@ struct VolumeSliderView: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 10) {
             Image(systemName: volumeIcon)
-                .font(.system(size: 11))
+                .font(.system(size: 13))
                 .foregroundColor(.accentColor)
-                .frame(width: 18)
+                .frame(width: 20)
+                .animation(.easeInOut(duration: 0.15), value: volumeIcon)
 
             Slider(
                 value: Binding(
@@ -218,13 +233,12 @@ struct VolumeSliderView: View {
                 ),
                 in: 0...1
             )
-            .controlSize(.mini)
-            .frame(maxWidth: 140)
+            .controlSize(.small)
 
             Text("\(Int(audioManager.volume * 100))%")
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(.secondary)
-                .frame(width: 32, alignment: .trailing)
+                .frame(width: 36, alignment: .trailing)
         }
         .onScrollWheel { delta in
             let newVolume = audioManager.volume + Float(delta * 0.02)
@@ -286,22 +300,25 @@ struct DeviceSectionView: View {
     var isActiveCategory: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
+                    .font(.system(size: 11))
                     .foregroundColor(isActiveCategory ? .accentColor : .secondary)
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.secondary)
                     .textCase(.uppercase)
+                    .tracking(0.5)
             }
 
             if devices.isEmpty {
                 Text("No devices")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary.opacity(0.7))
                     .italic()
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 DeviceListView(
                     devices: devices,
@@ -334,27 +351,30 @@ struct HiddenDevicesToggleView: View {
                 .frame(height: 1)
         } else {
             Button {
-                isExpanded.toggle()
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isExpanded.toggle()
+                }
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 8, weight: .semibold))
+                HStack(spacing: 5) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     Image(systemName: "eye.slash")
-                        .font(.system(size: 10))
-                    Text("\(allHiddenDevices.count) ignored")
                         .font(.system(size: 11))
+                    Text("\(allHiddenDevices.count) ignored")
+                        .font(.system(size: 12))
                 }
                 .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
             .popover(isPresented: $isExpanded, arrowEdge: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     ForEach(allHiddenDevices, id: \.id) { device in
                         HiddenDeviceRow(device: device)
                     }
                 }
-                .padding(8)
-                .frame(minWidth: 200)
+                .padding(12)
+                .frame(minWidth: 220)
             }
         }
     }
@@ -375,11 +395,11 @@ struct HiddenDeviceRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: deviceIcon)
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundColor(.secondary)
-                .frame(width: 16)
+                .frame(width: 18)
 
             Text(device.name)
                 .font(.system(size: 13))
@@ -394,21 +414,25 @@ struct HiddenDeviceRow: View {
                     audioManager.unhideDevice(device)
                 } label: {
                     Image(systemName: "eye")
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
                 .help("Stop ignoring")
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(isHovering ? Color.primary.opacity(0.05) : Color.clear)
+            RoundedRectangle(cornerRadius: 8)
+                .fill(isHovering ? Color.primary.opacity(0.06) : Color.clear)
         )
+        .animation(.easeInOut(duration: 0.15), value: isHovering)
         .onHover { hovering in
-            isHovering = hovering
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovering = hovering
+            }
         }
     }
 }
