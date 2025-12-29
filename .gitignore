@@ -65,3 +65,7 @@ Thumbs.db
 
 # Index
 Index/
+
+# xcode-build-server files
+buildServer.json
+.compile

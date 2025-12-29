@@ -1,25 +1,99 @@
 import SwiftUI
 import CoreAudio
+import AppKit
 
 @main
-struct AudioPriorityBarApp: App {
-    @StateObject private var audioManager = AudioManager()
+struct AudioPriorityBarMain {
+    private static let delegate = AppDelegate()
 
-    var body: some Scene {
-        MenuBarExtra {
-            MenuBarView()
-                .environmentObject(audioManager)
-        } label: {
-            MenuBarLabel(
-                volume: audioManager.volume,
-                isOutputMuted: audioManager.isActiveOutputMuted,
-                isInputMuted: audioManager.isActiveInputMuted,
-                isCustomMode: audioManager.isCustomMode,
-                mode: audioManager.currentMode,
-                micFlash: audioManager.micFlashState
+    static func main() {
+        let app = NSApplication.shared
+        // Start as regular app to ensure proper menu bar initialization
+        app.setActivationPolicy(.regular)
+        app.delegate = delegate
+        
+        // Switch to accessory after menu bar is set up
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            app.setActivationPolicy(.accessory)
+            NSLog("AudioPriorityBar: Switched to accessory mode")
+        }
+        
+        app.run()
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusItem: NSStatusItem?
+    private var popover: NSPopover?
+    private var audioManager: AudioManager?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Create status item IMMEDIATELY
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        
+        if let button = statusItem?.button {
+            // Use SF Symbol for the icon
+            let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .medium)
+            if let img = NSImage(systemSymbolName: "speaker.wave.2.fill", accessibilityDescription: "Audio")?
+                .withSymbolConfiguration(config) {
+                img.isTemplate = true
+                button.image = img
+            } else {
+                button.title = "🔊"
+            }
+            button.action = #selector(togglePopover(_:))
+            button.target = self
+        }
+        
+        NSLog("AudioPriorityBar: Status item created")
+        
+        // Delay popover initialization
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+            self?.setupPopover()
+        }
+    }
+    
+    @MainActor
+    private func setupPopover() {
+        NSLog("AudioPriorityBar: Setting up popover...")
+        
+        popover = NSPopover()
+        popover?.contentSize = NSSize(width: 340, height: 500)
+        popover?.behavior = .transient
+        popover?.animates = true
+
+        audioManager = AudioManager()
+        if let audioManager, let popover {
+            popover.contentViewController = NSHostingController(
+                rootView: MenuBarView().environmentObject(audioManager)
             )
         }
-        .menuBarExtraStyle(.window)
+        
+        NSLog("AudioPriorityBar: Popover ready")
+    }
+
+    @objc private func togglePopover(_ sender: Any?) {
+        guard let button = statusItem?.button, let popover else {
+            NSLog("AudioPriorityBar: Popover not ready")
+            return
+        }
+        
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            // Use button bounds directly, show below
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            
+            // After showing, manually adjust the window position down by icon height
+            if let popoverWindow = popover.contentViewController?.view.window {
+                var frame = popoverWindow.frame
+                frame.origin.y -= button.bounds.height
+                popoverWindow.setFrame(frame, display: true)
+            }
+            
+            popover.contentViewController?.view.window?.makeKey()
+            NSLog("AudioPriorityBar: Popover shown")
+        }
     }
 }
 
@@ -41,7 +115,6 @@ struct MenuBarLabel: View {
             } else if mode == .headphone {
                 Image(systemName: "headphones")
             }
-            // Speaker with volume always last
             if isOutputMuted {
                 Image(systemName: "speaker.slash.fill")
             } else {
@@ -54,7 +127,6 @@ struct MenuBarLabel: View {
 struct VolumeMeterView: View {
     let volume: Float
     let isMuted: Bool
-
     private let barCount = 4
     private let barSpacing: CGFloat = 1
 
@@ -62,15 +134,12 @@ struct VolumeMeterView: View {
         Canvas { context, size in
             let barWidth = (size.width - CGFloat(barCount - 1) * barSpacing) / CGFloat(barCount)
             let filledBars = isMuted ? 0 : Int(ceil(Double(volume) * Double(barCount)))
-
             for i in 0..<barCount {
                 let x = CGFloat(i) * (barWidth + barSpacing)
                 let barHeight = size.height * CGFloat(i + 1) / CGFloat(barCount)
                 let y = size.height - barHeight
-
                 let rect = CGRect(x: x, y: y, width: barWidth, height: barHeight)
                 let path = Path(roundedRect: rect, cornerRadius: 1)
-
                 if i < filledBars {
                     context.fill(path, with: .color(isMuted ? .red : .primary))
                 } else {
@@ -94,7 +163,7 @@ class AudioManager: ObservableObject {
     @Published var currentMode: OutputCategory = .speaker
     @Published var volume: Float = 0
     @Published var isEditMode: Bool = false
-    @Published var isCustomMode: Bool = false  // Disables auto-switching
+    @Published var isCustomMode: Bool = false
     @Published var mutedDeviceIds: Set<AudioObjectID> = []
     @Published var isActiveOutputMuted: Bool = false
     @Published var isActiveInputMuted: Bool = false
@@ -115,41 +184,32 @@ class AudioManager: ObservableObject {
 
     func refreshMuteStatus() {
         var muted: Set<AudioObjectID> = []
-
         for device in inputDevices where device.isConnected {
             if deviceService.isDeviceMuted(device.id, type: .input) {
                 muted.insert(device.id)
             }
         }
-
         for device in speakerDevices where device.isConnected {
             if deviceService.isDeviceMuted(device.id, type: .output) {
                 muted.insert(device.id)
             }
         }
-
         for device in headphoneDevices where device.isConnected {
             if deviceService.isDeviceMuted(device.id, type: .output) {
                 muted.insert(device.id)
             }
         }
-
         mutedDeviceIds = muted
-
-        // Check if active devices are muted
         if let outputId = currentOutputId {
             isActiveOutputMuted = muted.contains(outputId)
         } else {
             isActiveOutputMuted = false
         }
-
         if let inputId = currentInputId {
             isActiveInputMuted = muted.contains(inputId)
         } else {
             isActiveInputMuted = false
         }
-
-        // Start/stop mic flash timer based on mute state
         if isActiveInputMuted && micFlashTimer == nil {
             micFlashTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { [weak self] _ in
                 Task { @MainActor in
@@ -187,7 +247,6 @@ class AudioManager: ObservableObject {
         refreshMuteStatus()
         setupDeviceChangeListener()
         setupMuteVolumeListener()
-        // Apply priority on startup (unless in custom mode)
         if !isCustomMode {
             applyHighestPriorityInput()
             applyHighestPriorityOutput()
@@ -209,70 +268,51 @@ class AudioManager: ObservableObject {
 
     func refreshDevices() {
         let allConnectedDevices = deviceService.getDevices()
-
-        // Remember all connected devices
         connectedDeviceUIDs = Set(allConnectedDevices.map { $0.uid })
         for device in allConnectedDevices {
             priorityManager.rememberDevice(device.uid, name: device.name, isInput: device.type == .input)
         }
-
         let connectedInputs = allConnectedDevices.filter { $0.type == .input }
         let connectedOutputs = allConnectedDevices.filter { $0.type == .output }
 
         if isEditMode {
-            // In edit mode: show all known devices, mark disconnected ones
             let knownDevices = priorityManager.getKnownDevices()
-
-            // Build full input list
             var allInputs: [AudioDevice] = connectedInputs
             for stored in knownDevices where stored.isInput {
                 if !connectedDeviceUIDs.contains(stored.uid) {
                     allInputs.append(.disconnected(uid: stored.uid, name: stored.name, type: .input))
                 }
             }
-
-            // Build full output list
             var allOutputs: [AudioDevice] = connectedOutputs
             for stored in knownDevices where !stored.isInput {
                 if !connectedDeviceUIDs.contains(stored.uid) {
                     allOutputs.append(.disconnected(uid: stored.uid, name: stored.name, type: .output))
                 }
             }
-
-            // In edit mode, show everything (including ignored) in main lists
             inputDevices = priorityManager.sortByPriority(allInputs, type: .input)
             hiddenInputDevices = []
-
             let speakers = allOutputs.filter { priorityManager.getCategory(for: $0) == .speaker }
             let headphones = allOutputs.filter { priorityManager.getCategory(for: $0) == .headphone }
-
             speakerDevices = priorityManager.sortByPriority(speakers, category: .speaker)
             headphoneDevices = priorityManager.sortByPriority(headphones, category: .headphone)
             hiddenSpeakerDevices = []
             hiddenHeadphoneDevices = []
         } else {
-            // Normal mode: only show connected, non-ignored devices
             let visibleInputs = connectedInputs.filter { !priorityManager.isHidden($0) }
             let hiddenInputs = connectedInputs.filter { priorityManager.isHidden($0) }
-
             inputDevices = priorityManager.sortByPriority(visibleInputs, type: .input)
             hiddenInputDevices = hiddenInputs
-
             let speakers = connectedOutputs.filter { priorityManager.getCategory(for: $0) == .speaker }
             let headphones = connectedOutputs.filter { priorityManager.getCategory(for: $0) == .headphone }
-
-            // Use category-specific ignore checks
             let visibleSpeakers = speakers.filter { !priorityManager.isHidden($0, inCategory: .speaker) }
             let hiddenSpeakers = speakers.filter { priorityManager.isHidden($0, inCategory: .speaker) }
             let visibleHeadphones = headphones.filter { !priorityManager.isHidden($0, inCategory: .headphone) }
             let hiddenHeadphones = headphones.filter { priorityManager.isHidden($0, inCategory: .headphone) }
-
             speakerDevices = priorityManager.sortByPriority(visibleSpeakers, category: .speaker)
             headphoneDevices = priorityManager.sortByPriority(visibleHeadphones, category: .headphone)
             hiddenSpeakerDevices = hiddenSpeakers
             hiddenHeadphoneDevices = hiddenHeadphones
         }
-
         currentInputId = deviceService.getCurrentDefaultDevice(type: .input)
         currentOutputId = deviceService.getCurrentDefaultDevice(type: .output)
     }
@@ -303,7 +343,6 @@ class AudioManager: ObservableObject {
         isCustomMode = enabled
         priorityManager.isCustomMode = enabled
         if !enabled {
-            // Exiting custom mode - apply highest priority
             applyHighestPriorityInput()
             applyHighestPriorityOutput()
         }
