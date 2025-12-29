@@ -108,13 +108,38 @@ class PriorityManager {
         if let raw = categories[device.uid], let category = OutputCategory(rawValue: raw) {
             return category
         }
-        return .speaker // Default to speaker
+        // Default headphone-like devices to headphone category
+        if HeadphoneDetection.isHeadphone(deviceName: device.name) {
+            return .headphone
+        }
+        return .speaker
     }
 
     func setCategory(_ category: OutputCategory, for device: AudioDevice) {
         var categories = defaults.dictionary(forKey: deviceCategoriesKey) as? [String: String] ?? [:]
         categories[device.uid] = category.rawValue
         defaults.set(categories, forKey: deviceCategoriesKey)
+    }
+
+    // MARK: - Never Use Devices (never auto-selected)
+
+    private let neverUseKey = "neverUseDevices"
+
+    func isNeverUse(_ device: AudioDevice) -> Bool {
+        let list = defaults.array(forKey: neverUseKey) as? [String] ?? []
+        return list.contains(device.uid)
+    }
+
+    func setNeverUse(_ device: AudioDevice, neverUse: Bool) {
+        var list = defaults.array(forKey: neverUseKey) as? [String] ?? []
+        if neverUse {
+            if !list.contains(device.uid) {
+                list.append(device.uid)
+            }
+        } else {
+            list.removeAll { $0 == device.uid }
+        }
+        defaults.set(list, forKey: neverUseKey)
     }
 
     // MARK: - Hidden Devices (per category)
