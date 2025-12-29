@@ -381,8 +381,10 @@ class AudioManager: ObservableObject {
     func moveSpeakerDevice(from source: IndexSet, to destination: Int) {
         speakerDevices.move(fromOffsets: source, toOffset: destination)
         priorityManager.savePriorities(speakerDevices, category: .speaker)
-        // Don't auto-switch when reordering speakers
-        // The new priority order will be used when devices connect/disconnect
+        // Switch to top speaker only if we're in speaker mode and top speaker is connected
+        if currentMode == .speaker, let topSpeaker = speakerDevices.first, topSpeaker.isConnected {
+            applyOutputDevice(topSpeaker)
+        }
     }
 
     func moveHeadphoneDevice(from source: IndexSet, to destination: Int) {
