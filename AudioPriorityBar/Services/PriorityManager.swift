@@ -148,6 +148,30 @@ class PriorityManager {
     private let hiddenSpeakersKey = "hiddenSpeakers"
     private let hiddenHeadphonesKey = "hiddenHeadphones"
 
+    // MARK: - Preferred Inputs for Outputs
+
+    private let preferredInputsKey = "preferredInputsForOutputs"
+
+    /// Get the preferred input device UID for a given output device
+    func getPreferredInput(forOutput outputUID: String) -> String? {
+        let mappings = defaults.dictionary(forKey: preferredInputsKey) as? [String: String] ?? [:]
+        return mappings[outputUID]
+    }
+
+    /// Set a preferred input device for a given output device
+    func setPreferredInput(_ inputUID: String, forOutput outputUID: String) {
+        var mappings = defaults.dictionary(forKey: preferredInputsKey) as? [String: String] ?? [:]
+        mappings[outputUID] = inputUID
+        defaults.set(mappings, forKey: preferredInputsKey)
+    }
+
+    /// Clear the preferred input for a given output device
+    func clearPreferredInput(forOutput outputUID: String) {
+        var mappings = defaults.dictionary(forKey: preferredInputsKey) as? [String: String] ?? [:]
+        mappings.removeValue(forKey: outputUID)
+        defaults.set(mappings, forKey: preferredInputsKey)
+    }
+
     func isHidden(_ device: AudioDevice) -> Bool {
         let key = hiddenKey(for: device)
         let hidden = defaults.array(forKey: key) as? [String] ?? []
