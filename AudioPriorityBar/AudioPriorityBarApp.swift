@@ -10,7 +10,14 @@ struct AudioPriorityBarApp: App {
             MenuBarView()
                 .environmentObject(audioManager)
         } label: {
-            Image(systemName: "speaker.wave.2.fill")
+            MenuBarLabel(
+                volume: audioManager.volume,
+                isOutputMuted: audioManager.isActiveOutputMuted,
+                isInputMuted: audioManager.isActiveInputMuted,
+                isCustomMode: audioManager.isCustomMode,
+                mode: audioManager.currentMode,
+                micFlash: audioManager.micFlashState
+            )
         }
         .menuBarExtraStyle(.window)
     }
