@@ -11,6 +11,7 @@
 		A10000000000000000000002 /* AudioDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* AudioDevice.swift */; };
 		A10000000000000000000003 /* AudioDeviceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* AudioDeviceService.swift */; };
 		A10000000000000000000004 /* PriorityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* PriorityManager.swift */; };
+		A10000000000000000000011 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* MenuBarController.swift */; };
 		A10000000000000000000005 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* MenuBarView.swift */; };
 		A10000000000000000000006 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* DeviceListView.swift */; };
 		A10000000000000000000007 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* LaunchAtLoginManager.swift */; };
@@ -27,6 +28,7 @@
 		A20000000000000000000002 /* AudioDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDevice.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 /* AudioDeviceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioDeviceService.swift; sourceTree = "<group>"; };
 		A20000000000000000000004 /* PriorityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A20000000000000000000005 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
 		A20000000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 				A20000000000000000000004 /* PriorityManager.swift */,
 				A20000000000000000000008 /* LaunchAtLoginManager.swift */,
 				DE42A89AB153F7394DACCC1B /* PreferencesWindowController.swift */,
+				A20000000000000000000011 /* MenuBarController.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -201,6 +204,7 @@
 				A10000000000000000000006 /* DeviceListView.swift in Sources */,
 				ED800EC86195D082D84E8604 /* PreferencesView.swift in Sources */,
 				A10000000000000000000007 /* LaunchAtLoginManager.swift in Sources */,
+				A10000000000000000000011 /* MenuBarController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

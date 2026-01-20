@@ -45,6 +45,7 @@ struct PreferencesView: View {
 /// General preferences tab
 struct GeneralPreferencesTab: View {
     @StateObject private var launchManager = LaunchAtLoginManager.shared
+    @EnvironmentObject var audioManager: AudioManager
 
     var body: some View {
         ScrollView {
@@ -66,6 +67,39 @@ struct GeneralPreferencesTab: View {
                     .padding(12)
                 } label: {
                     Label("Startup", systemImage: "power.circle")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                }
+                .groupBoxStyle(PreferencesGroupBoxStyle())
+
+                // Quick Switch section
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Toggle(isOn: Binding(
+                            get: { audioManager.priorityManager.isQuickSwitchEnabled },
+                            set: { audioManager.priorityManager.isQuickSwitchEnabled = $0 }
+                        )) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Quick Switch Mode")
+                                    .font(.system(size: 13, weight: .medium))
+                                Text("Single-click the menu bar icon to toggle between speakers and headphones. Right-click to open the menu.")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .toggleStyle(.switch)
+                        
+                        if audioManager.priorityManager.isQuickSwitchEnabled {
+                            Text("Restart the app for this change to take effect.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.orange)
+                                .padding(.top, 4)
+                        }
+                    }
+                    .padding(12)
+                } label: {
+                    Label("Menu Bar", systemImage: "hand.point.up.left.fill")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.secondary)
                         .textCase(.uppercase)

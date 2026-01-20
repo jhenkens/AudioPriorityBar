@@ -42,6 +42,7 @@ class PriorityManager {
     private let customModeKey = "customMode"
     private let hiddenDevicesKey = "hiddenDevices"
     private let knownDevicesKey = "knownDevices"
+    private let quickSwitchKey = "quickSwitchEnabled"
 
     // MARK: - Known Devices (Persistent Memory)
 
@@ -99,6 +100,11 @@ class PriorityManager {
     var isCustomMode: Bool {
         get { defaults.bool(forKey: customModeKey) }
         set { defaults.set(newValue, forKey: customModeKey) }
+    }
+
+    var isQuickSwitchEnabled: Bool {
+        get { defaults.bool(forKey: quickSwitchKey) }
+        set { defaults.set(newValue, forKey: quickSwitchKey) }
     }
 
     // MARK: - Device Categories
