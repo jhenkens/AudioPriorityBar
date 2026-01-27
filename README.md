@@ -70,6 +70,7 @@ Check the [Releases](https://github.com/tobi/AudioPriorityBar/releases) page for
 - **Ignore as [category]**: Hide from current category only
 - **Ignore entirely**: Hide from both speaker and headphone lists
 - **Forget Device**: Remove disconnected device from memory
+- **Set as Priority Microphone (Inputs only)**: If available, prefer this input above all others for the current output. Use this to pair a specific input to a specific output.
 
 ### Edit Mode
 
