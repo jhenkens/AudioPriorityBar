@@ -302,6 +302,25 @@ class AudioManager: ObservableObject {
     func setVolume(_ newVolume: Float) {
         volume = newVolume
         deviceService.setOutputVolume(newVolume)
+
+        // Unmute the device if it's muted and volume is being changed
+        if let outputId = currentOutputId, isActiveOutputMuted {
+            deviceService.setDeviceMuted(outputId, type: .output, muted: false)
+            // Refresh mute status immediately
+            Task { @MainActor in
+                self.refreshMuteStatus()
+            }
+        }
+    }
+
+    func toggleOutputMute() {
+        guard let outputId = currentOutputId else { return }
+        let newMuteState = !isActiveOutputMuted
+        deviceService.setDeviceMuted(outputId, type: .output, muted: newMuteState)
+        // Refresh mute status immediately
+        Task { @MainActor in
+            self.refreshMuteStatus()
+        }
     }
 
     var activeOutputDevices: [AudioDevice] {
@@ -419,7 +438,15 @@ class AudioManager: ObservableObject {
 
     func toggleMode() {
         let newMode: OutputCategory = currentMode == .speaker ? .headphone : .speaker
-        setMode(newMode)
+
+        // Check if target mode has any connected devices
+        let targetDevices = newMode == .speaker ? speakerDevices : headphoneDevices
+        let hasConnectedDevices = targetDevices.contains { $0.isConnected }
+
+        // Only switch if target mode has connected devices
+        if hasConnectedDevices {
+            setMode(newMode)
+        }
     }
 
     func setCustomMode(_ enabled: Bool) {

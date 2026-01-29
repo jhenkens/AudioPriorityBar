@@ -228,6 +228,43 @@ class AudioDeviceService {
         return false
     }
 
+    func setDeviceMuted(_ deviceId: AudioObjectID, type: AudioDeviceType, muted: Bool) {
+        let scope: AudioObjectPropertyScope = type == .input
+            ? kAudioDevicePropertyScopeInput
+            : kAudioDevicePropertyScopeOutput
+
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: scope,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var muteValue: UInt32 = muted ? 1 : 0
+        let dataSize = UInt32(MemoryLayout<UInt32>.size)
+
+        var status = AudioObjectSetPropertyData(
+            deviceId,
+            &propertyAddress,
+            0,
+            nil,
+            dataSize,
+            &muteValue
+        )
+
+        // If master element didn't work, try element 1 (first channel)
+        if status != noErr {
+            propertyAddress.mElement = 1
+            AudioObjectSetPropertyData(
+                deviceId,
+                &propertyAddress,
+                0,
+                nil,
+                dataSize,
+                &muteValue
+            )
+        }
+    }
+
     func getDeviceVolume(_ deviceId: AudioObjectID) -> Float {
         var propertyAddress = AudioObjectPropertyAddress(
             mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
