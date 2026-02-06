@@ -47,6 +47,17 @@ struct GeneralPreferencesTab: View {
     @StateObject private var launchManager = LaunchAtLoginManager.shared
     @EnvironmentObject var audioManager: AudioManager
 
+    @State private var leftClickAction: ClickAction = .menu
+    @State private var rightClickAction: ClickAction = .menu
+    @State private var longLeftClickAction: ClickAction = .noAction
+    @State private var longRightClickAction: ClickAction = .noAction
+    @State private var hasConfigChanged: Bool = false
+
+    private var isConfigValid: Bool {
+        leftClickAction == .menu || rightClickAction == .menu ||
+        longLeftClickAction == .menu || longRightClickAction == .menu
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -73,29 +84,93 @@ struct GeneralPreferencesTab: View {
                 }
                 .groupBoxStyle(PreferencesGroupBoxStyle())
 
-                // Quick Switch section
+                // Click Actions section
                 GroupBox {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle(isOn: Binding(
-                            get: { audioManager.priorityManager.isQuickSwitchEnabled },
-                            set: { audioManager.priorityManager.isQuickSwitchEnabled = $0 }
-                        )) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Quick Switch Mode")
-                                    .font(.system(size: 13, weight: .medium))
-                                Text("Single-click the menu bar icon to toggle between speakers and headphones. Right-click to open the menu.")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Click Actions")
+                            .font(.system(size: 13, weight: .medium))
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            // Left Click
+                            HStack(spacing: 8) {
+                                Text("Left Click:")
+                                    .font(.system(size: 12))
+                                    .frame(width: 100, alignment: .trailing)
+                                Picker("", selection: $leftClickAction) {
+                                    ForEach(ClickAction.allCases, id: \.self) { action in
+                                        Text(action.displayName).tag(action)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 150)
+                            }
+
+                            // Right Click
+                            HStack(spacing: 8) {
+                                Text("Right Click:")
+                                    .font(.system(size: 12))
+                                    .frame(width: 100, alignment: .trailing)
+                                Picker("", selection: $rightClickAction) {
+                                    ForEach(ClickAction.allCases, id: \.self) { action in
+                                        Text(action.displayName).tag(action)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 150)
+                            }
+
+                            // Long Left Click
+                            HStack(spacing: 8) {
+                                Text("Long Left Click:")
+                                    .font(.system(size: 12))
+                                    .frame(width: 100, alignment: .trailing)
+                                Picker("", selection: $longLeftClickAction) {
+                                    ForEach(ClickAction.allCases, id: \.self) { action in
+                                        Text(action.displayName).tag(action)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 150)
+                            }
+
+                            // Long Right Click
+                            HStack(spacing: 8) {
+                                Text("Long Right Click:")
+                                    .font(.system(size: 12))
+                                    .frame(width: 100, alignment: .trailing)
+                                Picker("", selection: $longRightClickAction) {
+                                    ForEach(ClickAction.allCases, id: \.self) { action in
+                                        Text(action.displayName).tag(action)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 150)
                             }
                         }
-                        .toggleStyle(.switch)
-                        
-                        if audioManager.priorityManager.isQuickSwitchEnabled {
-                            Text("Restart the app for this change to take effect.")
+
+                        // Validation warning
+                        if !isConfigValid {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                    .font(.system(size: 12))
+                                Text("At least one action must be set to 'Show Menu'")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.orange)
+                            }
+                        }
+
+                        // Restart notice
+                        if hasConfigChanged {
+                            Text("Restart the app for changes to take effect.")
                                 .font(.system(size: 11))
                                 .foregroundColor(.orange)
                                 .padding(.top, 4)
                         }
+
+                        Text("Long press threshold: 500ms")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
                     }
                     .padding(12)
                 } label: {
@@ -105,6 +180,17 @@ struct GeneralPreferencesTab: View {
                         .textCase(.uppercase)
                 }
                 .groupBoxStyle(PreferencesGroupBoxStyle())
+                .onAppear {
+                    let config = audioManager.priorityManager.clickActionsConfig
+                    leftClickAction = config.leftClick
+                    rightClickAction = config.rightClick
+                    longLeftClickAction = config.longLeftClick
+                    longRightClickAction = config.longRightClick
+                }
+                .onChange(of: leftClickAction) { _ in saveConfig() }
+                .onChange(of: rightClickAction) { _ in saveConfig() }
+                .onChange(of: longLeftClickAction) { _ in saveConfig() }
+                .onChange(of: longRightClickAction) { _ in saveConfig() }
 
                 // System Output Sync section
                 GroupBox {
@@ -161,6 +247,20 @@ struct GeneralPreferencesTab: View {
             }
             .padding(20)
         }
+    }
+
+    private func saveConfig() {
+        guard isConfigValid else { return }
+
+        let newConfig = ClickActionsConfig(
+            leftClick: leftClickAction,
+            rightClick: rightClickAction,
+            longLeftClick: longLeftClickAction,
+            longRightClick: longRightClickAction
+        )
+
+        audioManager.priorityManager.clickActionsConfig = newConfig
+        hasConfigChanged = true
     }
 }
 

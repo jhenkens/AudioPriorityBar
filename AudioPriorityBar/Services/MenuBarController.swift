@@ -7,34 +7,41 @@ class MenuBarController {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private let audioManager: AudioManager
-    private let isQuickSwitchEnabled: Bool
     private var updateTimer: Timer?
-    
-    init(audioManager: AudioManager, isQuickSwitchEnabled: Bool) {
+
+    // Long press detection
+    private var longPressTimer: Timer?
+    private var longPressTriggered = false
+    private var eventMonitor: Any?
+
+    private enum MouseButton {
+        case left, right
+    }
+
+    init(audioManager: AudioManager) {
         self.audioManager = audioManager
-        self.isQuickSwitchEnabled = isQuickSwitchEnabled
         setupMenuBar()
         setupUpdateTimer()
     }
+
     
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
+
         if let button = statusItem?.button {
             updateButton()
-            
-            if isQuickSwitchEnabled {
-                // Quick switch mode: left click toggles, right click shows menu
-                button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-                button.action = #selector(handleClick(_:))
-                button.target = self
-            } else {
-                // Normal mode: any click shows menu
-                button.action = #selector(handleClick(_:))
-                button.target = self
+
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            button.action = #selector(statusBarButtonClicked(_:))
+            button.target = self
+
+            // Monitor for mouse down events
+            eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                self?.handleMouseDownEvent(event)
+                return event
             }
         }
-        
+
         // Create popover for menu content
         let popover = NSPopover()
         popover.contentViewController = NSHostingController(
@@ -54,21 +61,75 @@ class MenuBarController {
         }
     }
     
-    @objc private func handleClick(_ sender: NSStatusBarButton) {
-        guard let event = NSApp.currentEvent else { return }
-        
-        if isQuickSwitchEnabled {
-            if event.type == .rightMouseUp {
-                // Right click: show menu
+    @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else {
+            return
+        }
+
+        let button: MouseButton = event.type == .leftMouseUp ? .left : .right
+        handleMouseUp(button: button, sender: sender)
+    }
+
+    private func handleMouseDownEvent(_ event: NSEvent) {
+        // Check if the event is on our status bar button
+        guard let button = statusItem?.button,
+              let window = event.window,
+              window == button.window else {
+            return
+        }
+
+        let locationInWindow = event.locationInWindow
+        let locationInButton = button.convert(locationInWindow, from: nil)
+
+        guard button.bounds.contains(locationInButton) else {
+            return
+        }
+
+        let mouseButton: MouseButton = event.type == .leftMouseDown ? .left : .right
+        handleMouseDown(button: mouseButton)
+    }
+
+    private func handleMouseDown(button: MouseButton) {
+        longPressTriggered = false
+
+        let timer = Timer(timeInterval: 0.5, repeats: false) { [weak self] _ in
+            self?.handleLongPress(button: button)
+        }
+        RunLoop.current.add(timer, forMode: .common)
+        longPressTimer = timer
+    }
+
+    private func handleMouseUp(button: MouseButton, sender: NSStatusBarButton) {
+        longPressTimer?.invalidate()
+        longPressTimer = nil
+
+        if !longPressTriggered {
+            let config = audioManager.priorityManager.clickActionsConfig
+            let action = button == .left ? config.leftClick : config.rightClick
+            executeAction(action, sender: sender)
+        }
+
+        longPressTriggered = false
+    }
+
+    private func handleLongPress(button: MouseButton) {
+        longPressTriggered = true
+        let config = audioManager.priorityManager.clickActionsConfig
+        let action = button == .left ? config.longLeftClick : config.longRightClick
+        executeAction(action, sender: statusItem?.button)
+    }
+
+    private func executeAction(_ action: ClickAction, sender: NSStatusBarButton? = nil) {
+        switch action {
+        case .toggle:
+            audioManager.toggleMode()
+            updateButton()
+        case .menu:
+            if let sender = sender {
                 showPopover(sender)
-            } else if event.type == .leftMouseUp {
-                // Left click: toggle mode
-                audioManager.toggleMode()
-                updateButton()
             }
-        } else {
-            // Normal mode: show menu
-            showPopover(sender)
+        case .noAction:
+            break
         }
     }
     
@@ -160,5 +221,9 @@ class MenuBarController {
     
     deinit {
         updateTimer?.invalidate()
+        longPressTimer?.invalidate()
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
 }

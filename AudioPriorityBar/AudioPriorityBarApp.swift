@@ -17,150 +17,17 @@ struct AudioPriorityBarApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var audioManager: AudioManager!
     var menuBarController: MenuBarController?
-    var statusItem: NSStatusItem?
-    var popover: NSPopover?
-    
+
     @MainActor
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Hide the app from the Dock
         NSApp.setActivationPolicy(.accessory)
-        
+
         // Initialize audio manager
         audioManager = AudioManager()
-        
-        // Setup menu bar based on preference
-        if audioManager.priorityManager.isQuickSwitchEnabled {
-            setupQuickSwitchMode()
-        } else {
-            setupNormalMode()
-        }
-    }
-    
-    @MainActor
-    private func setupQuickSwitchMode() {
-        menuBarController = MenuBarController(
-            audioManager: audioManager,
-            isQuickSwitchEnabled: true
-        )
-    }
-    
-    @MainActor
-    private func setupNormalMode() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
-        if let button = statusItem?.button {
-            button.action = #selector(togglePopover(_:))
-            button.target = self
-            updateMenuBarIcon()
-        }
-        
-        // Create popover
-        let popover = NSPopover()
-        popover.contentViewController = NSHostingController(
-            rootView: MenuBarView()
-                .environmentObject(audioManager)
-        )
-        popover.behavior = .transient
-        self.popover = popover
-        
-        // Observe changes to update the menu bar icon
-        setupObservers()
-    }
-    
-    @objc private func togglePopover(_ sender: AnyObject?) {
-        guard let popover = popover else { return }
-        
-        if popover.isShown {
-            popover.performClose(sender)
-        } else if let button = statusItem?.button {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            NSApp.activate(ignoringOtherApps: true)
-            popover.contentViewController?.view.window?.makeKey()
-        }
-    }
-    
-    @MainActor
-    private func updateMenuBarIcon() {
-        guard let button = statusItem?.button else { return }
-        
-        // Build icon using SF Symbols based on state
-        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-        var symbols: [NSImage] = []
-        
-        // Input mute indicator
-        if audioManager.isActiveInputMuted {
-            let micIcon = audioManager.micFlashState ? "mic.fill" : "mic.slash.fill"
-            if let image = NSImage(systemSymbolName: micIcon, accessibilityDescription: nil)?.withSymbolConfiguration(config) {
-                symbols.append(image)
-            }
-        }
-        
-        // Custom mode indicator
-        if audioManager.isCustomMode {
-            if let image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: nil)?.withSymbolConfiguration(config) {
-                symbols.append(image)
-            }
-        }
-        
-        // Output indicator - headphone in headphone mode, speaker in speaker mode
-        if audioManager.currentMode == .headphone {
-            // Headphone icon
-            if let image = NSImage(systemSymbolName: "headphones", accessibilityDescription: nil)?.withSymbolConfiguration(config) {
-                symbols.append(image)
-            }
-        } else {
-            // Speaker icon with volume indication
-            let speakerIcon: String
-            if audioManager.isActiveOutputMuted {
-                speakerIcon = "speaker.slash.fill"
-            } else {
-                // Use variable speaker icon based on volume
-                let volume = audioManager.volume
-                if volume > 0.66 {
-                    speakerIcon = "speaker.wave.3.fill"
-                } else if volume > 0.33 {
-                    speakerIcon = "speaker.wave.2.fill"
-                } else if volume > 0 {
-                    speakerIcon = "speaker.wave.1.fill"
-                } else {
-                    speakerIcon = "speaker.fill"
-                }
-            }
-            
-            if let image = NSImage(systemSymbolName: speakerIcon, accessibilityDescription: nil)?.withSymbolConfiguration(config) {
-                symbols.append(image)
-            }
-        }
-        
-        // Combine symbols into one image
-        if !symbols.isEmpty {
-            let spacing: CGFloat = 2
-            let totalWidth = symbols.map { $0.size.width }.reduce(0, +) + CGFloat(symbols.count - 1) * spacing
-            let maxHeight = symbols.map { $0.size.height }.max() ?? 16
-            
-            let combinedImage = NSImage(size: NSSize(width: totalWidth, height: maxHeight))
-            combinedImage.lockFocus()
-            
-            var xOffset: CGFloat = 0
-            for symbol in symbols {
-                let yOffset = (maxHeight - symbol.size.height) / 2
-                symbol.draw(at: NSPoint(x: xOffset, y: yOffset), from: .zero, operation: .sourceOver, fraction: 1.0)
-                xOffset += symbol.size.width + spacing
-            }
-            
-            combinedImage.unlockFocus()
-            combinedImage.isTemplate = true
-            button.image = combinedImage
-        }
-    }
-    
-    private func setupObservers() {
-        // Observe audio manager properties to update menu bar icon
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.updateMenuBarIcon()
-            }
-        }
+
+        // Setup menu bar controller
+        menuBarController = MenuBarController(audioManager: audioManager)
     }
 }
 

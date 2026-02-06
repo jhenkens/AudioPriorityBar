@@ -21,6 +21,7 @@
 		4DD6D82E5CF6D899F9B4F327 /* AppInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 622640DCAA11DD5022FC5DBF /* AppInfo.swift */; };
 		5EACF86E108BAB90FAC19892 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE42A89AB153F7394DACCC1B /* PreferencesWindowController.swift */; };
 		ED800EC86195D082D84E8604 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3538E8C4D0E18A321A5344 /* PreferencesView.swift */; };
+		A10000000000000000000012 /* ClickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* ClickActions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		622640DCAA11DD5022FC5DBF /* AppInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInfo.swift; sourceTree = "<group>"; };
 		DE42A89AB153F7394DACCC1B /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
 		BA3538E8C4D0E18A321A5344 /* PreferencesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesView.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* ClickActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickActions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +84,7 @@
 				A20000000000000000000002 /* AudioDevice.swift */,
 				A20000000000000000000009 /* Headphones.swift */,
 				622640DCAA11DD5022FC5DBF /* AppInfo.swift */,
+				A20000000000000000000012 /* ClickActions.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -197,6 +200,7 @@
 				A10000000000000000000002 /* AudioDevice.swift in Sources */,
 				A10000000000000000000009 /* Headphones.swift in Sources */,
 				4DD6D82E5CF6D899F9B4F327 /* AppInfo.swift in Sources */,
+				A10000000000000000000012 /* ClickActions.swift in Sources */,
 				A10000000000000000000003 /* AudioDeviceService.swift in Sources */,
 				A10000000000000000000004 /* PriorityManager.swift in Sources */,
 				5EACF86E108BAB90FAC19892 /* PreferencesWindowController.swift in Sources */,

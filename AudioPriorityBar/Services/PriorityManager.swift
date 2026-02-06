@@ -44,6 +44,7 @@ class PriorityManager {
     private let knownDevicesKey = "knownDevices"
     private let quickSwitchKey = "quickSwitchEnabled"
     private let syncSystemOutputKey = "syncSystemOutput"
+    private let clickActionsKey = "clickActionsConfig"
 
     // MARK: - Known Devices (Persistent Memory)
 
@@ -109,7 +110,7 @@ class PriorityManager {
     }
 
     var syncSystemOutput: Bool {
-        get { 
+        get {
             // Default to true if not set
             if defaults.object(forKey: syncSystemOutputKey) == nil {
                 return true
@@ -117,6 +118,46 @@ class PriorityManager {
             return defaults.bool(forKey: syncSystemOutputKey)
         }
         set { defaults.set(newValue, forKey: syncSystemOutputKey) }
+    }
+
+    var clickActionsConfig: ClickActionsConfig {
+        get {
+            // Try to load from UserDefaults
+            if let data = defaults.data(forKey: clickActionsKey),
+               let config = try? JSONDecoder().decode(ClickActionsConfig.self, from: data) {
+                return config
+            }
+
+            // Migration: Check if old isQuickSwitchEnabled setting exists
+            if defaults.object(forKey: quickSwitchKey) != nil {
+                let wasQuickSwitchEnabled = defaults.bool(forKey: quickSwitchKey)
+                if wasQuickSwitchEnabled {
+                    // Old quick switch mode: left=toggle, right=menu
+                    return ClickActionsConfig(
+                        leftClick: .toggle,
+                        rightClick: .menu,
+                        longLeftClick: .noAction,
+                        longRightClick: .noAction
+                    )
+                } else {
+                    // Old normal mode: left=menu, right=menu
+                    return ClickActionsConfig(
+                        leftClick: .menu,
+                        rightClick: .menu,
+                        longLeftClick: .noAction,
+                        longRightClick: .noAction
+                    )
+                }
+            }
+
+            // New users: return default
+            return .default
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: clickActionsKey)
+            }
+        }
     }
 
     // MARK: - Device Categories
