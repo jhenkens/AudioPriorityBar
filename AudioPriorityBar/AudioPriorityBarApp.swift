@@ -107,6 +107,7 @@ class AudioManager: ObservableObject {
     private var micFlashTimer: Timer?
     let priorityManager = PriorityManager()
     private var connectedDeviceUIDs: Set<String> = []
+    private var volumeSetTask: Task<Void, Never>?
 
     private let logger = Logger(subsystem: "com.audioprioritybar", category: "AudioManager")
     private var handleDeviceChangeCount = 0
@@ -168,6 +169,20 @@ class AudioManager: ObservableObject {
 
     func setVolume(_ newVolume: Float) {
         volume = newVolume
+
+        // Suppress system-callback volume refresh while the user is actively controlling volume.
+        // Without this, the CoreAudio listener fires handleMuteOrVolumeChange → refreshVolume()
+        // which reads a lagging hardware value and snaps the UI back, causing jitter.
+        volumeSetTask?.cancel()
+        volumeSetTask = Task { @MainActor in
+            do {
+                try await Task.sleep(nanoseconds: 100_000_000) // 100ms debounce
+                self.volumeSetTask = nil
+            } catch {
+                // Cancelled because setVolume was called again — keep suppressing
+            }
+        }
+
         deviceService.setOutputVolume(newVolume)
 
         // Unmute the device if it's muted and volume is being changed
@@ -222,7 +237,10 @@ class AudioManager: ObservableObject {
 
     private func handleMuteOrVolumeChange() {
         refreshMuteStatus()
-        refreshVolume()
+        // Only sync volume from the system when the user isn't actively setting it
+        if volumeSetTask == nil {
+            refreshVolume()
+        }
     }
 
     func refreshDevices() {
@@ -303,17 +321,20 @@ class AudioManager: ObservableObject {
         }
     }
 
-    func toggleMode() {
+    /// Returns true if the toggle succeeded, false if there was nothing to switch to.
+    @discardableResult
+    func toggleMode() -> Bool {
         let newMode: OutputCategory = currentMode == .speaker ? .headphone : .speaker
 
         // Check if target mode has any connected devices
         let targetDevices = newMode == .speaker ? speakerDevices : headphoneDevices
         let hasConnectedDevices = targetDevices.contains { $0.isConnected }
 
-        // Only switch if target mode has connected devices
         if hasConnectedDevices {
             setMode(newMode)
+            return true
         }
+        return false
     }
 
     func setCustomMode(_ enabled: Bool) {

@@ -122,8 +122,12 @@ class MenuBarController {
     private func executeAction(_ action: ClickAction, sender: NSStatusBarButton? = nil) {
         switch action {
         case .toggle:
-            audioManager.toggleMode()
-            updateButton()
+            let toggled = audioManager.toggleMode()
+            if toggled {
+                updateButton()
+            } else if let sender = sender {
+                showPopover(sender)
+            }
         case .menu:
             if let sender = sender {
                 showPopover(sender)
@@ -193,7 +197,22 @@ class MenuBarController {
             }
             
             if let image = NSImage(systemSymbolName: speakerIcon, accessibilityDescription: nil)?.withSymbolConfiguration(config) {
-                symbols.append(image)
+                // Pad to the widest possible speaker icon so the slot width never changes
+                let allSpeakerIcons = ["speaker.slash.fill", "speaker.wave.3.fill", "speaker.wave.2.fill", "speaker.wave.1.fill", "speaker.fill"]
+                let maxWidth = allSpeakerIcons.compactMap {
+                    NSImage(systemSymbolName: $0, accessibilityDescription: nil)?.withSymbolConfiguration(config)?.size.width
+                }.max() ?? image.size.width
+
+                if maxWidth > image.size.width {
+                    let padded = NSImage(size: NSSize(width: maxWidth, height: image.size.height))
+                    padded.lockFocus()
+                    image.draw(at: NSPoint(x: (maxWidth - image.size.width) / 2, y: 0), from: .zero, operation: .sourceOver, fraction: 1.0)
+                    padded.unlockFocus()
+                    padded.isTemplate = true
+                    symbols.append(padded)
+                } else {
+                    symbols.append(image)
+                }
             }
         }
         
